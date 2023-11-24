@@ -748,26 +748,29 @@ def mqtt_device(topics, payload):
     if device == "light":
         length = 10
         packet = bytearray(length)
-        packet[0] = 0xF7
+        packet[0] = 0xEF
         packet[1] = cmd["id"]
         packet[2] = int(idn.split("_")[0]) << 4 | int(idn.split("_")[1])
         packet[3] = cmd["cmd"]
-        packet[4] = 0x03
-        packet[5] = int(idn.split("_")[2])
-        packet[6] = int(float(payload))
+        packet[4] = 0x00
+        packet[5] = 0x00
+        packet[6] = 0x00
         packet[7] = 0x00
         packet[8], packet[9] = serial_generate_checksum(packet)
 
     elif device == "thermostat":
         length = 8
         packet = bytearray(length)
-        packet[0] = 0xF7
+        packet[0] = 0xEF
         packet[1] = cmd["id"]
         packet[2] = int(idn.split("_")[0]) << 4 | int(idn.split("_")[1])
-        packet[3] = cmd["cmd"]
-        packet[4] = 0x01
-        packet[5] = int(float(payload))
-        packet[6], packet[7] = serial_generate_checksum(packet)
+        packet[3] = 0x04
+        packet[4] = 0x80 | 0x81
+        packet[5] = 0x00
+        packet[6] = 0x00
+        packet[7] = 0x00
+        packet[8], packet[9] = serial_generate_checksum(packet)
+
     
     packet = bytes(packet)
     
@@ -1234,14 +1237,14 @@ def serial_get_header():
         while 1:
             header_0 = conn.recv(1)[0]
             #if header_0 >= 0x80: break
-            if header_0 == 0xF7: break
+            if header_0 == 0xEF: break
 
         # 중간에 corrupt되는 data가 있으므로 연속으로 0x80보다 큰 byte가 나오면 먼젓번은 무시한다
-        # KTDO: 연속 0xF7 무시                                           
+        # KTDO: 연속 0xEF 무시                                           
         while 1:
             header_1 = conn.recv(1)[0]
             #if header_1 < 0x80: break
-            if header_1 != 0xF7: break
+            if header_1 != 0xEF: break
             header_0 = header_1
         
         header_2 = conn.recv(1)[0]
@@ -1443,7 +1446,7 @@ def dump_loop():
 
             if data:
                 for b in data:
-                    if b == 0xF7 or len(logs) > 500:
+                    if b == 0xEF or len(logs) > 500:
                         logger.info("".join(logs))
                         logs = ["{:02X}".format(b)]
                     else:           logs.append(",  {:02X}".format(b))
